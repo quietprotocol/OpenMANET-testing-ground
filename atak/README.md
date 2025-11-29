@@ -40,6 +40,23 @@ Before installing TAK Server, ensure Docker is properly configured on OpenWrt:
 
 ## Installation
 
+### Step 0: Install Required Packages
+
+On your OpenWrt device, install the required packages:
+
+```bash
+opkg update
+opkg install git-http git openssh-client bash unzip coreutils-sha1sum
+```
+
+**Packages:**
+- `git-http` - Git with HTTP/HTTPS support
+- `git` - Git version control
+- `openssh-client` - SSH client for Git operations
+- `bash` - Bash shell (required by setup scripts)
+- `unzip` - ZIP file extraction
+- `coreutils-sha1sum` - SHA1 checksum utility
+
 ### Step 1: Clone Cloud-RF TAK Server
 
 On your OpenWrt device, clone the original repository:
@@ -52,12 +69,15 @@ cd tak-server
 
 ### Step 2: Download TAK Server ZIP
 
-Download the official TAK Server Docker ZIP file from [tak.gov/products/tak-server](https://tak.gov/products/tak-server) and place it in the `tak-server` directory:
+Download the official TAK Server Docker ZIP file from [tak.gov/products/tak-server](https://tak.gov/products/tak-server) and place it in the `tak-server` directory on your device.
+
+**Copy from your local machine via SCP:**
 
 ```bash
-# Example: if downloaded to /tmp
-cp /tmp/takserver-docker-*.zip ~/tak-server/
+# Replace <device-ip> with your device IP address
+scp takserver-docker-5.5-RELEASE-58.zip root@<device-ip>:/root/tak-server/
 ```
+
 
 **Note**: This setup has only been tested with `takserver-docker-5.5-RELEASE-58.zip`.
 
