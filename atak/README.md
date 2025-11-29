@@ -154,6 +154,14 @@ The setup script will:
 
 ## Post-Installation
 
+### Generate user certs and create data package
+
+```bash
+docker exec -it -w /opt/tak/certs tak-server-tak-1 ./makeCert.sh client "YOURCLIENT"
+./scripts/certDP.sh "YOURCLIENT"
+./scripts/shareCerts.sh
+```
+
 ### Access WebTAK
 
 After successful installation, access the WebTAK interface at:
