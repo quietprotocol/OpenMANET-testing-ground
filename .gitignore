@@ -1,0 +1,18 @@
+# Environment files with sensitive information
+.env
+**/.env
+# But allow .env.example files to be committed
+!.env.example
+!**/.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
