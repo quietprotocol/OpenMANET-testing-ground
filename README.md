@@ -111,6 +111,42 @@ cd ~/tak-server
 
 ---
 
+### 3.5. Install OpenTAKServer (Alternative)
+
+**Location**: [`opentakserver/`](opentakserver/)
+
+Install and configure [OpenTAKServer (OTS)](https://github.com/brian7704/OpenTAKServer), an open-source alternative to the official TAK Server.
+
+**Steps:**
+```bash
+cd opentakserver
+# Option 1: Use .env file (recommended)
+# From project root: cp .env.example .env
+# Edit .env with your device IP and password
+./deploy_compose.sh
+
+# Option 2: Provide credentials as arguments
+./deploy_compose.sh <device-ip> <device-password>
+```
+
+Then on the device:
+```bash
+cd ~/ots-docker
+make up
+```
+
+**Prerequisites:**
+- OpenWrt device with Docker configured (from step 2)
+- At least 4GB RAM recommended (8GB+ for better performance)
+- Sufficient storage for Docker images (~2GB+)
+- Clone the [ots-docker](https://github.com/milsimdk/ots-docker) repository on the device
+
+**Note**: This configuration uses modified ports (8880, 8440, 8881) to avoid conflicts with OpenWrt's uhttpd service.
+
+**See**: [`opentakserver/README.md`](opentakserver/README.md) for detailed OpenTAKServer installation and configuration.
+
+---
+
 ### 4. Set Up GPS (Optional)
 
 **Location**: [`gps/`](gps/)
@@ -151,6 +187,7 @@ This script:
 ├── atak/             # TAK Server installation scripts
 ├── docker/           # Docker storage configuration
 ├── gps/              # GPS initialization setup
+├── opentakserver/    # OpenTAKServer Docker Compose configuration
 ├── openwrt/          # OpenWrt firmware build instructions
 └── README.md         # This file
 ```
@@ -190,6 +227,7 @@ If you encounter issues:
 2. **Docker issues**: See [`docker/README.md`](docker/README.md) troubleshooting section
 3. **GPS issues**: See [`gps/README.md`](gps/README.md) troubleshooting section
 4. **TAK Server issues**: See [`atak/README.md`](atak/README.md) troubleshooting section
+5. **OpenTAKServer issues**: See [`opentakserver/README.md`](opentakserver/README.md) troubleshooting section
 
 ## TODOs
 
@@ -241,4 +279,6 @@ Some links
 - [OpenMANET Documentation](https://openmanet.github.io/docs/)
 - [TAK Product Center](https://tak.gov)
 - [Cloud-RF TAK Server](https://github.com/Cloud-RF/tak-server)
+- [OpenTAKServer](https://github.com/brian7704/OpenTAKServer) - Open-source TAK Server alternative
+- [ots-docker](https://github.com/milsimdk/ots-docker) - Docker Compose setup for OpenTAKServer
 
