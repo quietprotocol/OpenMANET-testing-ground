@@ -1,0 +1,27 @@
+---
+# GPS initialization role
+
+- name: Copy gps-init script to device
+  ansible.builtin.copy:
+    src: gps-init
+    dest: /etc/init.d/gps-init
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Enable GPS init script to run at boot
+  ansible.builtin.command:
+    cmd: /etc/init.d/gps-init enable
+  changed_when: true
+
+- name: Check GPS init script status
+  ansible.builtin.command:
+    cmd: /etc/init.d/gps-init status
+  register: gps_status
+  changed_when: false
+  failed_when: false
+
+- name: Display GPS status
+  ansible.builtin.debug:
+    msg: "{{ gps_status.stdout_lines }}"
+

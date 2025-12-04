@@ -250,8 +250,26 @@ If you encounter issues:
 
 ### Ansible
 
-- Because it's prettier than scripts.
+**✅ Ansible deployment is now available!** See [`ansible/README.md`](ansible/README.md) for details.
 
+The Ansible setup provides:
+- Idempotent deployments (safe to run multiple times)
+- Multi-device management via inventory
+- Modular roles for each component
+- Better error handling and logging
+- Dry-run capability with `--check`
+
+**Quick Start:**
+```bash
+cd ansible
+cp inventory/hosts.example.yml inventory/hosts.yml
+# Edit inventory/hosts.yml with your device info
+ansible-playbook playbooks/site.yml
+```
+
+See [`ansible/QUICKSTART.md`](ansible/QUICKSTART.md) for a 5-minute guide.
+
+**References:**
 - [https://github.com/gekmihesg/ansible-openwrt](https://github.com/gekmihesg/ansible-openwrt)
 - [https://github.com/imp1sh/ansible_managemynetwork](https://github.com/imp1sh/ansible_managemynetwork)
 

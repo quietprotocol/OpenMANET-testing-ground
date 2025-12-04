@@ -1,0 +1,37 @@
+---
+# Main playbook for OpenMANET gateway deployment
+# Usage: ansible-playbook playbooks/site.yml
+
+- name: Deploy OpenMANET Gateway Configuration
+  hosts: openmanet_devices
+  gather_facts: yes
+  become: no
+  
+  tasks:
+    - name: Include docker role
+      include_role:
+        name: docker
+      tags:
+        - docker
+        - storage
+
+    - name: Include gps role
+      include_role:
+        name: gps
+      tags:
+        - gps
+
+    - name: Include atak role
+      include_role:
+        name: atak
+      tags:
+        - atak
+        - tak-server
+
+    - name: Include opentakserver role
+      include_role:
+        name: opentakserver
+      tags:
+        - opentakserver
+        - ots
+

@@ -1,0 +1,23 @@
+---
+# Example inventory file
+# Copy this to hosts.yml and update with your device information
+all:
+  children:
+    openmanet_devices:
+      hosts:
+        gateway1:
+          ansible_host: 192.168.1.1
+          ansible_user: root
+          ansible_password: your_password_here
+          # Or use SSH key:
+          # ansible_ssh_private_key_file: ~/.ssh/id_rsa
+          
+        gateway2:
+          ansible_host: 192.168.1.2
+          ansible_user: root
+          ansible_password: another_password
+          
+      vars:
+        # Variables applied to all devices in this group
+        device_user: root
+

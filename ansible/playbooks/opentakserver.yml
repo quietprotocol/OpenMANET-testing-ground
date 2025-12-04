@@ -1,0 +1,12 @@
+---
+# Playbook for OpenTAKServer deployment only
+# Usage: ansible-playbook playbooks/opentakserver.yml
+
+- name: Deploy OpenTAKServer
+  hosts: openmanet_devices
+  gather_facts: yes
+  become: no
+  
+  roles:
+    - opentakserver
+
