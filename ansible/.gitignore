@@ -1,5 +1,5 @@
 # Ansible
-inventory/hosts.yml
+!inventory/hosts.yml
 !inventory/hosts.example.yml
 host_vars/*/vault.yml
 group_vars/*/vault.yml

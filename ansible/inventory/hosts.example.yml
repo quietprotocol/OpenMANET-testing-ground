@@ -17,6 +17,13 @@ all:
           ansible_user: root
           ansible_password: another_password
           
+        mesh_point:
+          ansible_host: 10.41.91.1
+          ansible_user: root
+          ansible_password: your_password_here
+          # Or use SSH key:
+          # ansible_ssh_private_key_file: ~/.ssh/id_rsa
+          
       vars:
         # Variables applied to all devices in this group
         device_user: root
