@@ -238,9 +238,54 @@
   when: 
     - tak_server_run_setup | bool
     - (not tak_server_configured.stat.exists) or (tak_server_force_setup | default(false) | bool)
-  async: 600
+  async: 1200
   poll: 10
   register: setup_result
+  tags:
+    - govtak
+    - setup
+
+- name: Check if setup actually completed (workaround for async timeout)
+  ansible.builtin.shell: |
+    grep -q "MAKE A NOTE OF YOUR PASSWORDS" /tmp/setup_output.txt && echo "SETUP_COMPLETE" || echo "SETUP_IN_PROGRESS"
+  when: 
+    - tak_server_run_setup | bool
+    - (not tak_server_configured.stat.exists) or (tak_server_force_setup | default(false) | bool)
+    - setup_result.finished is not defined or setup_result.finished == 0
+  register: setup_completion_check
+  changed_when: false
+  failed_when: false
+  tags:
+    - govtak
+    - setup
+
+- name: Wait for setup to complete if still running
+  ansible.builtin.wait_for:
+    path: /tmp/setup_output.txt
+    search_regex: "MAKE A NOTE OF YOUR PASSWORDS"
+    timeout: 1200
+    delay: 10
+  when: 
+    - tak_server_run_setup | bool
+    - (not tak_server_configured.stat.exists) or (tak_server_force_setup | default(false) | bool)
+    - setup_completion_check.stdout != "SETUP_COMPLETE"
+    - setup_result.finished is not defined or setup_result.finished == 0
+  tags:
+    - govtak
+    - setup
+
+- name: Force completion if setup output shows completion
+  ansible.builtin.set_fact:
+    setup_result:
+      finished: 1
+      failed: false
+      rc: 0
+      msg: "Setup completed successfully (detected via output check)"
+  when:
+    - tak_server_run_setup | bool
+    - (not tak_server_configured.stat.exists) or (tak_server_force_setup | default(false) | bool)
+    - setup_completion_check.stdout == "SETUP_COMPLETE"
+    - setup_result.finished is not defined or setup_result.finished == 0
   tags:
     - govtak
     - setup
@@ -358,7 +403,7 @@
 - name: Create data packages for user certificates
   ansible.builtin.shell: |
     cd {{ tak_server_dir }}
-    ./scripts/certDP.sh "{{ item }}"
+    ./scripts/certDP.sh "{{ ansible_host | default(ansible_default_ipv4.address) }}" "{{ item }}"
   loop: "{{ tak_server_user_accounts }}"
   when: 
     - tak_server_run_setup | bool
