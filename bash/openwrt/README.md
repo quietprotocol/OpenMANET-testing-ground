@@ -106,11 +106,12 @@ Copy the built image to your local machine:
 
 **Option 1: Using .env file (recommended)**
 
-If you've configured the build server settings in the project root `.env` file:
+If you've configured the build server settings in the bash directory `.env` file:
 
 ```bash
 # Load environment variables
 source ../.env
+# Note: This assumes you're in the openwrt subdirectory and .env is in the bash directory
 
 # Transfer the image
 scp -i ${BUILD_SSH_KEY} \
@@ -133,7 +134,7 @@ scp -i ~/.ssh/<your-ssh-key> \
 - `/path/to/openwrt/...` - Actual path to the built image on the build server
 - `~/path/to/destination/...` - Destination path on your local machine
 
-**Note**: Configure build server settings in the project root `.env` file:
+**Note**: Configure build server settings in the bash directory `.env` file (`bash/.env`):
 - `BUILD_SERVER_USER` - Username on build server
 - `BUILD_SERVER_HOST` - Build server hostname or IP
 - `BUILD_SERVER_PATH` - Path to OpenWrt build output directory

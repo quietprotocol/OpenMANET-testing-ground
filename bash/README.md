@@ -1,0 +1,310 @@
+# OpenMANET Testing Ground
+
+This repository contains setup scripts and documentation for configuring OpenMANET gateways running OpenWrt with Docker, GPS, and TAK Server support.
+
+DISCLAIMER! THIS IS CLANKER TERRITORY. USE AT YOUR OWN RISK. NO REFUNDS.
+
+## Initial Setup
+
+Before running the deployment scripts, set up your device credentials:
+
+```bash
+# Copy the example environment file in the bash directory
+cp bash/.env.example bash/.env
+
+# Edit bash/.env with your actual device IP addresses and password
+# The .env file is gitignored and will not be committed
+```
+
+The `.env` file supports:
+- `DEVICE_IP` - Device IP address (used by all services)
+- `DEVICE_USER` - SSH username (default: root)
+- `DEVICE_PASS` - SSH password
+
+## Setup Order
+
+Follow these steps in order to set up a complete OpenMANET gateway:
+
+### 1. Build and Flash OpenWrt Firmware
+
+**Location**: [`openwrt/`](openwrt/)
+
+Build a custom OpenWrt image with Docker support and flash it to your device.
+
+**Steps:**
+1. Build the OpenWrt image following instructions in [`openwrt/README.md`](openwrt/README.md)
+2. Flash the image to your device (OTA upgrade or manual flash)
+3. Verify the device boots and is accessible via SSH
+
+**Prerequisites:**
+- Ubuntu build machine
+- OpenWrt device (Raspberry Pi 4 recommended)
+
+**See**: [`openwrt/README.md`](openwrt/README.md) for detailed build instructions.
+
+**Note**: You can also deploy the docker_diffconfig to your build server using the deployment script:
+```bash
+cd openwrt
+./deploy_docker_diffconfig.sh [build-server] [build-server-user] [ssh-key-path|password]
+```
+
+---
+
+### 2. Configure Docker Storage
+
+**Location**: [`bash/docker/`](bash/docker/)
+
+Configure Docker to use the `overlay2` storage driver for optimal performance.
+
+**Steps:**
+```bash
+cd bash/docker
+# Option 1: Use .env file (recommended)
+# cp bash/.env.example bash/.env
+# Edit bash/.env with your device IP and password
+./deploy_dockerd_overlay2.sh
+
+# Option 2: Provide credentials as arguments
+./deploy_dockerd_overlay2.sh <device-ip> <device-password>
+```
+
+This script:
+- Configures Docker to use `overlay2` storage driver
+- Sets up ext4 loopback filesystem for Docker data
+- Makes the configuration persistent across reboots
+
+**Prerequisites:**
+- OpenWrt device with Docker packages installed (from step 1)
+- SSH access to the device
+
+**See**: [`bash/docker/README.md`](bash/docker/README.md) for detailed configuration and troubleshooting.
+
+---
+
+### 3. Install TAK Server
+
+**Location**: [`bash/atak/`](bash/atak/)
+
+Install and configure TAK Server for ATAK/iTAK client support.
+
+**Steps:**
+```bash
+cd bash/atak
+# Option 1: Use .env file (recommended)
+# cp bash/.env.example bash/.env
+# Edit bash/.env with your device IP and password
+./deploy_scripts.sh
+
+# Option 2: Provide credentials as arguments
+./deploy_scripts.sh <device-ip> <device-password>
+```
+
+Then on the device:
+```bash
+cd ~/tak-server
+./scripts/setup.sh
+```
+
+**Prerequisites:**
+- OpenWrt device with Docker configured (from step 2)
+- At least 8GB RAM recommended
+- Sufficient storage for Docker images (~5GB+)
+- TAK Server ZIP file from [tak.gov](https://tak.gov/products/tak-server)
+
+**Important**: Docker must be properly configured (step 2) before installing TAK Server, as TAK Server runs in Docker containers.
+
+**See**: [`bash/atak/README.md`](bash/atak/README.md) for detailed TAK Server installation and configuration.
+
+---
+
+### 3.5. Install OpenTAKServer (Alternative)
+
+**Location**: [`bash/opentakserver/`](bash/opentakserver/)
+
+Install and configure [OpenTAKServer (OTS)](https://github.com/brian7704/OpenTAKServer), an open-source alternative to the official TAK Server.
+
+**Steps:**
+```bash
+cd bash/opentakserver
+# Option 1: Use .env file (recommended)
+# cp bash/.env.example bash/.env
+# Edit bash/.env with your device IP and password
+./deploy_compose.sh
+
+# Option 2: Provide credentials as arguments
+./deploy_compose.sh <device-ip> <device-password>
+```
+
+Then on the device:
+```bash
+cd ~/ots-docker
+make up
+```
+
+**Prerequisites:**
+- OpenWrt device with Docker configured (from step 2)
+- At least 4GB RAM recommended (8GB+ for better performance)
+- Sufficient storage for Docker images (~2GB+)
+- Clone the [ots-docker](https://github.com/milsimdk/ots-docker) repository on the device
+
+**Note**: This configuration uses modified ports (8880, 8440, 8881) to avoid conflicts with OpenWrt's uhttpd service.
+
+**See**: [`bash/opentakserver/README.md`](bash/opentakserver/README.md) for detailed OpenTAKServer installation and configuration.
+
+---
+
+### 4. Set Up GPS (Optional)
+
+**Location**: [`bash/gps/`](bash/gps/)
+
+Configure GPS initialization for WM1302 Pi Hat with Quectel L76K GNSS module.
+
+**Steps:**
+```bash
+cd bash/gps
+# Option 1: Use .env file (recommended)
+# cp bash/.env.example bash/.env
+# Edit bash/.env with your device IP and password
+./deploy_gps_init.sh
+
+# Option 2: Provide credentials as arguments
+./deploy_gps_init.sh <device-ip> <device-password>
+```
+
+This script:
+- Deploys GPS initialization script to the device
+- Configures GPS to run on boot via `/etc/rc.local`
+- Sets up GPIO pins for GPS reset and wake control
+
+**Prerequisites:**
+- OpenWrt device (from step 1)
+- WM1302 Pi Hat with GPS module installed
+- GPS antenna connected
+- SSH access to the device
+
+**Note**: GPS setup is independent and can be done at any time after OpenWrt is installed.
+
+**See**: [`bash/gps/README.md`](bash/gps/README.md) for detailed GPS configuration and troubleshooting.
+
+## Directory Structure
+
+```
+.
+├── ansible/          # Ansible playbooks and roles (recommended)
+├── bash/             # Bash deployment scripts
+│   ├── atak/         # TAK Server installation scripts
+│   ├── docker/       # Docker storage configuration
+│   ├── gps/          # GPS initialization setup
+│   ├── openwrt/      # OpenWrt firmware build instructions
+│   └── opentakserver/ # OpenTAKServer Docker Compose configuration
+└── README.md         # Root README (points to ansible/ and bash/)
+```
+
+## Verification
+
+After completing all steps, verify your setup:
+
+1. **OpenWrt**: Device boots and is accessible
+   ```bash
+   ssh root@[device-ip]
+   ```
+
+2. **Docker**: Docker uses overlay2 storage driver
+   ```bash
+   docker info | grep "Storage Driver"
+   # Should show: Storage Driver: overlay2
+   ```
+
+3. **TAK Server**: WebTAK accessible
+   ```bash
+   # Access https://[device-ip]:8443
+   # Import admin.p12 certificate first
+   ```
+
+4. **GPS**: GPS outputs NMEA data (if configured)
+   ```bash
+   cat /dev/ttyAMA0
+   # Should show NMEA sentences
+   ```
+
+## Troubleshooting
+
+If you encounter issues:
+
+1. **OpenWrt issues**: See [`openwrt/README.md`](openwrt/README.md) troubleshooting section
+2. **Docker issues**: See [`bash/docker/README.md`](bash/docker/README.md) troubleshooting section
+3. **GPS issues**: See [`bash/gps/README.md`](bash/gps/README.md) troubleshooting section
+4. **TAK Server issues**: See [`bash/atak/README.md`](bash/atak/README.md) troubleshooting section
+5. **OpenTAKServer issues**: See [`bash/opentakserver/README.md`](bash/opentakserver/README.md) troubleshooting section
+
+## TODOs
+
+### GPS
+
+- Get GPS working
+  - Why doesn't mine work on ttyS0?
+  - [WM1302 Pi Hat GPS Discussion](https://forum.chirpstack.io/t/wm1302-pi-hat-built-in-gps/24124)
+
+### ATAK
+
+- GPS to COT forwarded
+  - With and without server
+  - [ATAK Push COTS](https://github.com/kylesayrs/ATAK_push_cots)
+  - [PyTAK](https://github.com/snstac/pytak)
+
+### UPS
+
+- Get battery status working. Missing i2c stuff on openmanet?
+
+### Ansible
+
+**✅ Ansible deployment is now available!** See [`ansible/README.md`](ansible/README.md) for details.
+
+The Ansible setup provides:
+- Idempotent deployments (safe to run multiple times)
+- Multi-device management via inventory
+- Modular roles for each component
+- Better error handling and logging
+- Dry-run capability with `--check`
+
+**Quick Start:**
+```bash
+cd ansible
+cp inventory/hosts.example.yml inventory/hosts.yml
+# Edit inventory/hosts.yml with your device info
+ansible-playbook playbooks/site.yml
+```
+
+See [`../ansible/README.md`](../ansible/README.md) for detailed Ansible documentation.
+
+**References:**
+- [https://github.com/gekmihesg/ansible-openwrt](https://github.com/gekmihesg/ansible-openwrt)
+- [https://github.com/imp1sh/ansible_managemynetwork](https://github.com/imp1sh/ansible_managemynetwork)
+
+### PTT
+
+Some links
+
+- [https://resilience-theatre.com/wiki/doku.php?id=secureptt:introduction](https://resilience-theatre.com/wiki/doku.php?id=secureptt:introduction)
+- [https://github.com/skuep/AIOC?tab=readme-ov-file](https://github.com/skuep/AIOC?tab=readme-ov-file)
+- [https://www.aliexpress.com/item/1005009672034522.html](https://www.aliexpress.com/item/1005009672034522.html)
+
+### MediaMTX server
+
+- [https://www.thetaksyndicate.org/mediamtx-video-server](https://www.thetaksyndicate.org/mediamtx-video-server)
+- [https://www.thetaksyndicate.org/mediamtx-video-server](https://www.thetaksyndicate.org/mediamtx-video-server)
+
+### Mumble
+
+- [https://github.com/mumble-voip/mumble-docker](https://github.com/mumble-voip/mumble-docker)
+
+
+## References
+
+- [OpenMANET OpenWrt Repository](https://github.com/OpenMANET/openwrt)
+- [OpenMANET Documentation](https://openmanet.github.io/docs/)
+- [TAK Product Center](https://tak.gov)
+- [Cloud-RF TAK Server](https://github.com/Cloud-RF/tak-server)
+- [OpenTAKServer](https://github.com/brian7704/OpenTAKServer) - Open-source TAK Server alternative
+- [ots-docker](https://github.com/milsimdk/ots-docker) - Docker Compose setup for OpenTAKServer
+

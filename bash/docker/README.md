@@ -84,7 +84,7 @@ The mount setup uses a **bind mount** approach:
 ```bash
 cd docker
 # Option 1: Use .env file (recommended)
-# From project root: cp .env.example .env
+# cp bash/.env.example bash/.env
 # Edit .env with your device IP and password
 ./deploy_dockerd_overlay2.sh
 
@@ -92,7 +92,7 @@ cd docker
 ./deploy_dockerd_overlay2.sh <device-ip> <device-password>
 ```
 
-**Note**: The `.env` file in the project root is gitignored and will not be committed. Copy `.env.example` to `.env` in the project root and update it with your actual device credentials.
+**Note**: The `.env` file in the bash directory is gitignored and will not be committed. Copy `bash/.env.example` to `bash/.env` and update it with your actual device credentials.
 
 Or manually:
 
