@@ -159,14 +159,167 @@
   tags:
     - govtak
 
+- name: Ensure local certs directory exists
+  ansible.builtin.file:
+    path: "{{ tak_server_certs_local_dir }}"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+  when: tak_server_run_setup | bool
+  tags:
+    - govtak
+    - setup
+
 - name: Run TAK Server setup script
   ansible.builtin.shell: |
     cd {{ tak_server_dir }}
     chmod +x scripts/setup.sh
-    ./scripts/setup.sh
+    ./scripts/setup.sh 2>&1 | tee /tmp/setup_output.txt
+    echo "SETUP_COMPLETE"
   when: tak_server_run_setup | bool
   async: 600
   poll: 10
+  register: setup_result
+  tags:
+    - govtak
+    - setup
+
+- name: Wait for setup to complete
+  ansible.builtin.wait_for:
+    path: /tmp/setup_output.txt
+    state: present
+  when: tak_server_run_setup | bool
+  tags:
+    - govtak
+    - setup
+
+- name: Read setup output file
+  ansible.builtin.slurp:
+    src: /tmp/setup_output.txt
+  register: setup_output_file
+  when: tak_server_run_setup | bool
+  tags:
+    - govtak
+    - setup
+
+- name: Extract passwords from setup output
+  ansible.builtin.set_fact:
+    setup_output_text: "{{ setup_output_file.content | b64decode | default('') }}"
+    tak_admin_password: "{{ (setup_output_file.content | b64decode | default('')) | regex_search('Admin password: ([^\\n\\r]+)', '\\1') | first | default('Password not found in output') }}"
+    tak_postgres_password: "{{ (setup_output_file.content | b64decode | default('')) | regex_search('PostgreSQL password: ([^\\n\\r]+)', '\\1') | first | default('Password not found in output') }}"
+  when: 
+    - tak_server_run_setup | bool
+    - setup_output_file.content is defined
+  tags:
+    - govtak
+    - setup
+
+- name: Display admin credentials
+  ansible.builtin.debug:
+    msg: |
+      ========== TAK SERVER CREDENTIALS ==========
+      Admin username: admin
+      Admin password: {{ tak_admin_password }}
+      PostgreSQL password: {{ tak_postgres_password }}
+      ============================================
+      Web interface: https://{{ ansible_host | default(inventory_hostname) }}:8443
+      IMPORTANT: Save these passwords - they won't be shown again!
+  when: tak_server_run_setup | bool
+  tags:
+    - govtak
+    - setup
+
+- name: Wait for TAK Server to be fully ready
+  ansible.builtin.pause:
+    seconds: 30
+    prompt: "Waiting 30 seconds for TAK Server to fully initialize before creating user certificates..."
+  when: tak_server_run_setup | bool
+  tags:
+    - govtak
+    - setup
+
+- name: Get TAK container name
+  ansible.builtin.shell: |
+    docker ps --filter "name=tak" --format "{{ '{{' }}.Names{{ '}}' }}" | head -1
+  when: tak_server_run_setup | bool
+  register: tak_container_name_result
+  changed_when: false
+  tags:
+    - govtak
+    - setup
+
+- name: Set TAK container name
+  ansible.builtin.set_fact:
+    tak_container_name: "{{ tak_container_name_result.stdout | default('tak-server-tak-1') }}"
+  when: tak_server_run_setup | bool
+  tags:
+    - govtak
+    - setup
+
+- name: Create user certificates for martin and leon
+  ansible.builtin.shell: |
+    docker exec -w /opt/tak/certs {{ tak_container_name }} ./makeCert.sh client "{{ item }}"
+  loop: "{{ tak_server_user_accounts }}"
+  when: tak_server_run_setup | bool
+  register: makecert_result
+  tags:
+    - govtak
+    - setup
+
+- name: Display certificate creation results
+  ansible.builtin.debug:
+    msg: "Created certificate for {{ item.item }}: {{ 'SUCCESS' if item.rc == 0 else 'FAILED' }}"
+  loop: "{{ makecert_result.results | default([]) }}"
+  when: 
+    - tak_server_run_setup | bool
+    - makecert_result.results is defined
+  tags:
+    - govtak
+    - setup
+
+- name: Create data packages for user certificates
+  ansible.builtin.shell: |
+    cd {{ tak_server_dir }}
+    ./scripts/certDP.sh "{{ item }}"
+  loop: "{{ tak_server_user_accounts }}"
+  when: tak_server_run_setup | bool
+  tags:
+    - govtak
+    - setup
+
+- name: Find all certificate files on device
+  ansible.builtin.find:
+    paths: "{{ tak_server_dir }}/tak/certs/files"
+    patterns: "*.{p12,zip,pem}"
+    recurse: false
+  when: tak_server_run_setup | bool
+  register: cert_files
+  tags:
+    - govtak
+    - setup
+
+- name: Download all certificates to local machine
+  ansible.builtin.fetch:
+    src: "{{ item.path }}"
+    dest: "{{ tak_server_certs_local_dir }}/{{ item.path | basename }}"
+    flat: yes
+  loop: "{{ cert_files.files }}"
+  when: 
+    - tak_server_run_setup | bool
+    - cert_files.files | length > 0
+  tags:
+    - govtak
+    - setup
+
+- name: Display certificate download summary
+  ansible.builtin.debug:
+    msg: |
+      Certificates downloaded to: {{ tak_server_certs_local_dir }}
+      Files downloaded: {{ cert_files.files | length }}
+      User accounts created: {{ tak_server_user_accounts | join(', ') }}
+  when: 
+    - tak_server_run_setup | bool
+    - cert_files.files | length > 0
   tags:
     - govtak
     - setup
