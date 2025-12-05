@@ -20,11 +20,11 @@
       tags:
         - gps
 
-    - name: Include atak role
+    - name: Include govtak role
       include_role:
-        name: atak
+        name: govtak
       tags:
-        - atak
+        - govtak
 
     - name: Include opentakserver role
       include_role:

@@ -1,0 +1,12 @@
+---
+# Playbook for GovTAK Server deployment only
+# Usage: ansible-playbook playbooks/govtak.yml
+
+- name: Deploy GovTAK Server
+  hosts: openmanet_devices
+  gather_facts: yes
+  become: no
+  
+  roles:
+    - govtak
+

@@ -26,9 +26,11 @@ The Ansible setup provides:
 
 3. **Run specific roles:**
 ```bash
+   ansible-playbook playbooks/site.yml --tags openwrt
    ansible-playbook playbooks/site.yml --tags docker
    ansible-playbook playbooks/site.yml --tags gps
-   ansible-playbook playbooks/site.yml --tags atak
+   ansible-playbook playbooks/site.yml --tags govtak
+   ansible-playbook playbooks/site.yml --tags opentakserver
    ```
 
 ## Directory Structure
@@ -43,13 +45,13 @@ ansible/
 │   └── hosts.yml            # Your inventory (gitignored)
 ├── playbooks/               # Playbooks
 │   ├── site.yml             # Main playbook
-│   ├── atak.yml             # TAK Server deployment
+│   ├── govtak.yml           # GovTAK Server deployment
 │   ├── docker.yml           # Docker configuration
 │   ├── gps.yml              # GPS setup
 │   ├── opentakserver.yml    # OpenTAKServer deployment
 │   └── openwrt.yml          # OpenWrt firmware build
 └── roles/                   # Ansible roles
-    ├── atak/                # TAK Server role
+    ├── govtak/              # GovTAK Server role
     ├── docker/               # Docker role
     ├── gps/                 # GPS role
     ├── opentakserver/       # OpenTAKServer role
@@ -116,7 +118,7 @@ Override these in `group_vars/all.yml` or `host_vars/<hostname>.yml` if needed.
 
 **Note:** GPS setup requires WM1302 Pi Hat hardware. The GPS will start automatically on boot.
 
-### atak
+### govtak
 
 Deploys TAK Server installation scripts and Docker Compose configuration.
 
@@ -126,7 +128,7 @@ Deploys TAK Server installation scripts and Docker Compose configuration.
 - Copies `docker-compose.arm.yml` configuration
 - Verifies deployment
 
-**Variables** (defined in `roles/atak/defaults/main.yml`):
+**Variables** (defined in `roles/govtak/defaults/main.yml`):
 - `tak_server_dir`: TAK Server directory (default: `~/tak-server`)
 - `tak_server_scripts_dir`: Scripts directory (default: `~/tak-server/scripts`)
 
@@ -248,20 +250,21 @@ The openwrt role also supports flashing firmware images to devices. You can flas
 **Flash Examples:**
 
 ```bash
+# Flash using auto-detected image from artifacts (recommended)
+ansible-playbook playbooks/site.yml --tags flash --limit gateway
+
 # Flash image that's already on the device
-ansible-playbook playbooks/site.yml --tags flash -e "openwrt_flash_image_path=/tmp/firmware.img.gz"
+ansible-playbook playbooks/site.yml --tags flash --limit gateway \
+  -e "openwrt_flash_image_path=/tmp/firmware.img.gz"
 
-# Flash image from local machine (will be transferred first)
-ansible-playbook playbooks/site.yml --tags flash -e "openwrt_flash_image_local=../artifacts/openwrt/firmware.img.gz"
-
-# Flash without preserving settings
-ansible-playbook playbooks/site.yml --tags flash \
-  -e "openwrt_flash_image_local=../artifacts/openwrt/firmware.img.gz" \
-  -e "openwrt_flash_keep_settings=false"
-
-# Flash to specific device
+# Flash specific image from local machine
 ansible-playbook playbooks/site.yml --tags flash --limit gateway \
   -e "openwrt_flash_image_local=../artifacts/openwrt/firmware.img.gz"
+
+# Flash without preserving settings
+ansible-playbook playbooks/site.yml --tags flash --limit gateway \
+  -e "openwrt_flash_image_local=../artifacts/openwrt/firmware.img.gz" \
+  -e "openwrt_flash_keep_settings=false"
 ```
 
 **Flash Process:**

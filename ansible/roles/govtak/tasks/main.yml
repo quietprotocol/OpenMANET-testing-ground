@@ -1,23 +1,23 @@
 ---
-# TAK Server deployment role
+# GovTAK Server deployment role
 
-- name: Ensure TAK Server directory exists
+- name: Ensure GovTAK Server directory exists
   ansible.builtin.file:
     path: "{{ tak_server_dir }}"
     state: directory
     mode: '0755'
   tags:
-    - atak
+    - govtak
 
-- name: Ensure TAK Server scripts directory exists
+- name: Ensure GovTAK Server scripts directory exists
   ansible.builtin.file:
     path: "{{ tak_server_scripts_dir }}"
     state: directory
     mode: '0755'
   tags:
-    - atak
+    - govtak
 
-- name: Copy TAK Server scripts to device
+- name: Copy GovTAK Server scripts to device
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: "{{ tak_server_scripts_dir }}/{{ item | basename }}"
@@ -27,7 +27,7 @@
     - certDP.sh
     - shareCerts.sh
   tags:
-    - atak
+    - govtak
 
 - name: Copy docker-compose.arm.yml to device
   ansible.builtin.copy:
@@ -35,19 +35,19 @@
     dest: "{{ tak_server_dir }}/docker-compose.arm.yml"
     mode: '0644'
   tags:
-    - atak
+    - govtak
 
 - name: Verify deployment
   ansible.builtin.command:
     cmd: ls -lh {{ tak_server_scripts_dir }}/*.sh {{ tak_server_dir }}/docker-compose.arm.yml
-  register: atak_verify
+  register: govtak_verify
   changed_when: false
   tags:
-    - atak
+    - govtak
 
 - name: Display deployment verification
   ansible.builtin.debug:
-    msg: "{{ atak_verify.stdout_lines }}"
+    msg: "{{ govtak_verify.stdout_lines }}"
   tags:
-    - atak
+    - govtak
 
