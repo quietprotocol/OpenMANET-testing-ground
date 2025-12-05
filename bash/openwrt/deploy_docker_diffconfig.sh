@@ -1,19 +1,19 @@
 #!/bin/bash
 # Deploy Docker diffconfig to OpenWrt build repository
 # Usage: ./deploy_docker_diffconfig.sh [build-server] [build-server-user] [ssh-key-path|password]
-# If .env file exists in the project root, it will be used for defaults
+# If .env file exists in the bash directory, it will be used for defaults
 #
 # This script uploads docker_diffconfig to boards/common/docker_diffconfig
 # in the OpenWrt build repository on the build server.
 
-# Get the project root directory (two levels up from this script's directory)
+# Get the bash directory (one level up from this script's directory)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+BASH_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# Load .env file from project root if it exists (for default values)
-if [ -f "${PROJECT_ROOT}/.env" ]; then
+# Load .env file from bash directory if it exists (for default values)
+if [ -f "${BASH_DIR}/.env" ]; then
     set -a
-    source "${PROJECT_ROOT}/.env"
+    source "${BASH_DIR}/.env"
     set +a
 fi
 
@@ -29,8 +29,8 @@ if [ -z "$BUILD_SERVER" ] || [ -z "$BUILD_USER" ]; then
     echo ""
     echo "You can either:"
     echo "  1. Provide server, user, and key/password as arguments: $0 build.example.com ubuntu ~/.ssh/id_rsa"
-    echo "  2. Create a .env file in the project root with BUILD_SERVER_HOST, BUILD_SERVER_USER, and BUILD_SSH_KEY or BUILD_SERVER_PASS"
-    echo "  3. Copy .env.example to .env in the project root and update the values"
+    echo "  2. Create a .env file in the bash directory with BUILD_SERVER_HOST, BUILD_SERVER_USER, and BUILD_SSH_KEY or BUILD_SERVER_PASS"
+    echo "  3. Copy bash/.env.example to bash/.env and update the values"
     exit 1
 fi
 
