@@ -1,16 +1,16 @@
 #!/bin/bash
 # Deploy Docker overlay2 storage setup script to OpenWrt device
 # Usage: ./deploy_dockerd_overlay2.sh [device-ip] [device-password]
-# If .env file exists in the project root, it will be used for defaults
+# If .env file exists in the bash directory, it will be used for defaults
 
-# Get the project root directory (parent of this script's directory)
+# Get the bash directory (one level up from this script's directory)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+BASH_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# Load .env file from project root if it exists (for default values)
-if [ -f "${PROJECT_ROOT}/.env" ]; then
+# Load .env file from bash directory if it exists (for default values)
+if [ -f "${BASH_DIR}/.env" ]; then
     set -a
-    source "${PROJECT_ROOT}/.env"
+    source "${BASH_DIR}/.env"
     set +a
 fi
 
@@ -25,8 +25,8 @@ if [ -z "$DEVICE_IP" ] || [ -z "$DEVICE_PASS" ]; then
     echo ""
     echo "You can either:"
     echo "  1. Provide IP and password as arguments: $0 192.168.1.1 mypassword"
-    echo "  2. Create a .env file in the project root with DEVICE_IP and DEVICE_PASS"
-    echo "  3. Copy .env.example to .env in the project root and update the values"
+    echo "  2. Create a .env file in the bash directory with DEVICE_IP and DEVICE_PASS"
+    echo "  3. Copy bash/.env.example to bash/.env and update the values"
     exit 1
 fi
 SCRIPT_NAME="dockerd-overlay2.sh"

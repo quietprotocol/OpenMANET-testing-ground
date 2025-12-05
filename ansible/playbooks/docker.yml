@@ -1,0 +1,12 @@
+---
+# Playbook for Docker overlay2 storage configuration only
+# Usage: ansible-playbook playbooks/docker.yml
+
+- name: Configure Docker Storage
+  hosts: openmanet_devices
+  gather_facts: yes
+  become: no
+  
+  roles:
+    - docker
+

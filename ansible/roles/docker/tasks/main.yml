@@ -1,0 +1,148 @@
+---
+# Docker overlay2 storage configuration role
+
+- name: Copy dockerd-overlay2.sh script to device
+  ansible.builtin.copy:
+    src: dockerd-overlay2.sh
+    dest: /usr/bin/dockerd-overlay2.sh
+    mode: '0755'
+    owner: root
+    group: root
+  tags:
+    - docker
+
+- name: Ensure target directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ docker_data_root }}"
+    - /mnt/docker-ext4
+  tags:
+    - docker
+
+- name: Check if USB device exists
+  ansible.builtin.stat:
+    path: "{{ docker_usb_device }}"
+  register: usb_device_stat
+  tags:
+    - docker
+
+- name: Check if Docker ext4 image exists
+  ansible.builtin.command:
+    cmd: test -f {{ docker_image_path }}
+  register: docker_image_stat
+  when: not usb_device_stat.stat.exists
+  changed_when: false
+  failed_when: false
+  tags:
+    - docker
+
+- name: Create Docker ext4 image (when USB not available)
+  ansible.builtin.command:
+    cmd: |
+      dd if=/dev/zero of={{ docker_image_path }} bs=1M count=0 seek=$(({{ docker_image_size_gb }}*1024))
+      mkfs.ext4 -F -E lazy_itable_init=0,lazy_journal_init=0 {{ docker_image_path }}
+  when: 
+    - not usb_device_stat.stat.exists
+    - docker_image_stat.rc != 0
+  changed_when: true
+  tags:
+    - docker
+
+- name: Configure bridge netfilter sysctl setting
+  ansible.builtin.sysctl:
+    name: net.bridge.bridge-nf-call-iptables
+    value: '0'
+    state: present
+    sysctl_set: yes
+    ignoreerrors: yes
+  tags:
+    - docker
+
+- name: Configure Docker daemon via UCI
+  ansible.builtin.shell: |
+    uci set dockerd.globals.storage_driver="{{ docker_storage_driver }}"
+    uci set dockerd.globals.data_root="{{ docker_data_root }}/"
+    uci set dockerd.globals.log_level="debug"
+    uci set dockerd.globals.iptables="0"
+    uci set dockerd.globals.ip6tables="0"
+    uci delete dockerd.globals.alt_config_file 2>/dev/null || true
+    uci commit dockerd
+  tags:
+    - docker
+
+- name: Update /etc/rc.local to call dockerd-overlay2.sh
+  ansible.builtin.blockinfile:
+    path: /etc/rc.local
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - Docker storage setup"
+    block: |
+      # Docker storage setup
+      /usr/bin/dockerd-overlay2.sh
+    insertbefore: "^exit 0"
+    create: yes
+  tags:
+    - docker
+
+- name: Stop Docker service
+  ansible.builtin.service:
+    name: dockerd
+    state: stopped
+  ignore_errors: true
+  tags:
+    - docker
+
+- name: Apply Docker overlay2 configuration immediately
+  ansible.builtin.command:
+    cmd: /usr/bin/dockerd-overlay2.sh
+  register: docker_setup_result
+  tags:
+    - docker
+
+- name: Start Docker service
+  ansible.builtin.service:
+    name: dockerd
+    state: started
+  ignore_errors: true
+  tags:
+    - docker
+
+- name: Wait for Docker to be ready
+  ansible.builtin.pause:
+    seconds: 5
+  tags:
+    - docker
+
+- name: Verify Docker storage driver
+  ansible.builtin.shell: docker info | grep "Storage Driver"
+  register: docker_storage_info
+  changed_when: false
+  failed_when: false
+  tags:
+    - docker
+
+- name: Check if overlay2 storage driver is active
+  ansible.builtin.set_fact:
+    docker_storage_is_overlay2: "{{ docker_storage_info.stdout is search('overlay2') }}"
+  tags:
+    - docker
+
+- name: Display Docker storage driver status
+  ansible.builtin.debug:
+    msg: |
+      Docker Storage Driver: {{ docker_storage_info.stdout }}
+      Overlay2 Active: {{ 'YES ✓' if docker_storage_is_overlay2 else 'NO ✗' }}
+      {% if not docker_storage_is_overlay2 %}
+      WARNING: Expected overlay2 storage driver but got something else!
+      {% endif %}
+  tags:
+    - docker
+
+- name: Fail if overlay2 is not active
+  ansible.builtin.fail:
+    msg: "Docker storage driver is not overlay2. Current driver: {{ docker_storage_info.stdout }}"
+  when: not docker_storage_is_overlay2
+  tags:
+    - docker
+
