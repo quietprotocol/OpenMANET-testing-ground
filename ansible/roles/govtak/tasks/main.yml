@@ -229,63 +229,47 @@
     - govtak
     - setup
 
-- name: Run TAK Server setup script
+- name: Start TAK Server setup script in background
   ansible.builtin.shell: |
     cd {{ tak_server_dir }}
     chmod +x scripts/setup.sh
-    echo "y" | ./scripts/setup.sh 2>&1 | tee /tmp/setup_output.txt
-    echo "SETUP_COMPLETE"
+    nohup bash -c 'echo "y" | ./scripts/setup.sh 2>&1 | tee /tmp/setup_output.txt' > /dev/null 2>&1 &
+    echo $!
   when: 
     - tak_server_run_setup | bool
     - (not tak_server_configured.stat.exists) or (tak_server_force_setup | default(false) | bool)
-  async: 1200
-  poll: 10
-  register: setup_result
+  register: setup_pid
+  changed_when: false
   tags:
     - govtak
     - setup
 
-- name: Check if setup actually completed (workaround for async timeout)
+- name: Monitor setup progress
   ansible.builtin.shell: |
-    grep -q "MAKE A NOTE OF YOUR PASSWORDS" /tmp/setup_output.txt && echo "SETUP_COMPLETE" || echo "SETUP_IN_PROGRESS"
+    # Get current line count
+    current_lines=$(wc -l < /tmp/setup_output.txt 2>/dev/null || echo "0")
+    # Get last 10 lines of output
+    tail -n 10 /tmp/setup_output.txt 2>/dev/null || echo "Waiting for setup to start..."
   when: 
     - tak_server_run_setup | bool
     - (not tak_server_configured.stat.exists) or (tak_server_force_setup | default(false) | bool)
-    - setup_result.finished is not defined or setup_result.finished == 0
-  register: setup_completion_check
+  register: setup_progress
   changed_when: false
   failed_when: false
+  until: setup_progress.stdout is search("MAKE A NOTE OF YOUR PASSWORDS")
+  retries: 240
+  delay: 10
   tags:
     - govtak
     - setup
 
-- name: Wait for setup to complete if still running
-  ansible.builtin.wait_for:
-    path: /tmp/setup_output.txt
-    search_regex: "MAKE A NOTE OF YOUR PASSWORDS"
-    timeout: 1200
-    delay: 10
+- name: Display setup progress
+  ansible.builtin.debug:
+    msg: "{{ setup_progress.stdout_lines }}"
   when: 
     - tak_server_run_setup | bool
     - (not tak_server_configured.stat.exists) or (tak_server_force_setup | default(false) | bool)
-    - setup_completion_check.stdout != "SETUP_COMPLETE"
-    - setup_result.finished is not defined or setup_result.finished == 0
-  tags:
-    - govtak
-    - setup
-
-- name: Force completion if setup output shows completion
-  ansible.builtin.set_fact:
-    setup_result:
-      finished: 1
-      failed: false
-      rc: 0
-      msg: "Setup completed successfully (detected via output check)"
-  when:
-    - tak_server_run_setup | bool
-    - (not tak_server_configured.stat.exists) or (tak_server_force_setup | default(false) | bool)
-    - setup_completion_check.stdout == "SETUP_COMPLETE"
-    - setup_result.finished is not defined or setup_result.finished == 0
+    - setup_progress.stdout_lines is defined
   tags:
     - govtak
     - setup
