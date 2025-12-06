@@ -70,3 +70,60 @@
   tags:
     - gps
 
+- name: Deploy alfred-gpsd init script to device
+  ansible.builtin.template:
+    src: alfred-gpsd-init.j2
+    dest: /etc/init.d/alfred-gpsd
+    mode: '0755'
+    owner: root
+    group: root
+  tags:
+    - gps
+    - alfred-gpsd
+
+- name: Check if alfred-gpsd init script is already enabled
+  ansible.builtin.stat:
+    path: /etc/rc.d/S95alfred-gpsd
+  register: alfred_gpsd_enabled
+  tags:
+    - gps
+    - alfred-gpsd
+
+- name: Enable alfred-gpsd init script to run at boot
+  ansible.builtin.command:
+    cmd: /etc/init.d/alfred-gpsd enable
+  when: not alfred_gpsd_enabled.stat.exists
+  register: alfred_gpsd_enable_result
+  changed_when: alfred_gpsd_enable_result.rc == 0
+  failed_when: alfred_gpsd_enable_result.rc != 0
+  tags:
+    - gps
+    - alfred-gpsd
+
+- name: Start alfred-gpsd service
+  ansible.builtin.command:
+    cmd: /etc/init.d/alfred-gpsd start
+  register: alfred_gpsd_start_result
+  changed_when: alfred_gpsd_start_result.rc == 0
+  failed_when: false
+  tags:
+    - gps
+    - alfred-gpsd
+
+- name: Check alfred-gpsd status
+  ansible.builtin.command:
+    cmd: /etc/init.d/alfred-gpsd status
+  register: alfred_gpsd_status
+  changed_when: false
+  failed_when: false
+  tags:
+    - gps
+    - alfred-gpsd
+
+- name: Display alfred-gpsd status
+  ansible.builtin.debug:
+    msg: "{{ alfred_gpsd_status.stdout_lines }}"
+  tags:
+    - gps
+    - alfred-gpsd
+
