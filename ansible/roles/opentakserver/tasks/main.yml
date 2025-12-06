@@ -75,6 +75,22 @@
   tags:
     - ots
 
+- name: Ensure nginx templates directory exists
+  ansible.builtin.file:
+    path: "{{ opentakserver_dir }}/persistent/nginx/templates"
+    state: directory
+    mode: '0755'
+  tags:
+    - ots
+
+- name: Copy fixed nginx http-80.conf.template
+  ansible.builtin.copy:
+    src: http-80.conf.template
+    dest: "{{ opentakserver_dir }}/persistent/nginx/templates/http-80.conf.template"
+    mode: '0644'
+  tags:
+    - ots
+
 - name: Verify deployment
   ansible.builtin.shell:
     cmd: |
