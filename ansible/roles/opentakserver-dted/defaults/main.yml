@@ -1,0 +1,28 @@
+---
+# Default variables for opentakserver-dted role
+
+# OpenTAKServer connection
+# Defaults to the current host's ansible_host or inventory_hostname
+# Override in group_vars or host_vars to point to specific OpenTAKServer instance
+opentakserver_host: "{{ ansible_host | default(inventory_hostname) }}"
+opentakserver_port: 8880
+opentakserver_username: administrator
+opentakserver_password: password
+
+# GitHub release information
+dted_release_tag: atak-dted-scandinavia
+dted_release_url: "https://github.com/martinmalek/OpenMANET-testing-ground/releases/download/{{ dted_release_tag }}"
+
+# DTED files to upload (from GitHub release)
+dted_files:
+  - name: "240805.DTED.North.zip"
+    url: "{{ dted_release_url }}/240805.DTED.North.zip"
+  # Large file commented out for now (1.1GB)
+  # - name: "240805.DTED.Scandinavia.and.Northern.Europe.zip"
+  #   url: "{{ dted_release_url }}/240805.DTED.Scandinavia.and.Northern.Europe.zip"
+
+# Local temporary directory for downloads
+dted_temp_dir: /tmp/dted_uploads
+
+# OpenTAKServer API endpoint for data package uploads
+opentakserver_upload_endpoint: /api/data_packages

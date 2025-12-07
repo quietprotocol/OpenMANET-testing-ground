@@ -59,3 +59,16 @@
       tags:
         - openwrt
 
+- name: Upload DTED files to OpenTAKServer
+  hosts: openmanet_devices
+  gather_facts: no
+  become: no
+  
+  tasks:
+    - name: Include opentakserver-dted role
+      include_role:
+        name: opentakserver-dted
+      tags:
+        - opentakserver-dted
+        - dted
+

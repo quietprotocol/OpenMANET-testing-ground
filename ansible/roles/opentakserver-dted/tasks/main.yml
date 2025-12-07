@@ -1,0 +1,178 @@
+---
+# OpenTAKServer DTED Upload Role
+# Uploads DTED elevation data files from GitHub release to OpenTAKServer
+# Uses token authentication: https://docs.opentakserver.io/authentication.html
+
+- name: Ensure temporary directory exists
+  ansible.builtin.file:
+    path: "{{ dted_temp_dir }}"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
+
+- name: Check if curl is available
+  ansible.builtin.command:
+    cmd: which curl
+  register: curl_check
+  changed_when: false
+  failed_when: false
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
+
+- name: Fail if curl is not available
+  ansible.builtin.fail:
+    msg: "curl is required but not installed on the control machine"
+  when: curl_check.rc != 0
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
+
+- name: Check if python3 is available
+  ansible.builtin.command:
+    cmd: which python3
+  register: python3_check
+  changed_when: false
+  failed_when: false
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
+
+- name: Get authentication token from OpenTAKServer
+  ansible.builtin.uri:
+    url: "http://{{ opentakserver_host }}:{{ opentakserver_port }}/api/login?include_auth_token="
+    method: POST
+    body_format: json
+    body:
+      username: "{{ opentakserver_username }}"
+      password: "{{ opentakserver_password }}"
+    status_code: [200]
+    return_content: yes
+  register: auth_response
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
+
+- name: Extract authentication token from response
+  ansible.builtin.set_fact:
+    auth_token: "{{ auth_response.json.response.user.authentication_token }}"
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
+
+- name: Display authentication success
+  ansible.builtin.debug:
+    msg: "Successfully authenticated with OpenTAKServer"
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
+
+- name: Download DTED files from GitHub release
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "{{ dted_temp_dir }}/{{ item.name }}"
+    mode: '0644'
+    timeout: 300
+  loop: "{{ dted_files }}"
+  register: dted_downloads
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
+
+- name: Verify downloaded files exist
+  ansible.builtin.stat:
+    path: "{{ item.dest }}"
+  loop: "{{ dted_downloads.results }}"
+  register: dted_file_stats
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
+
+- name: Upload DTED files to OpenTAKServer
+  ansible.builtin.shell:
+    cmd: |
+      curl -s -w "\n%{http_code}" -X POST \
+        -H "Authentication-Token: {{ auth_token }}" \
+        -F "file=@{{ item.stat.path }}" \
+        "http://{{ opentakserver_host }}:{{ opentakserver_port }}{{ opentakserver_upload_endpoint }}"
+  loop: "{{ dted_file_stats.results }}"
+  register: dted_uploads
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
+
+- name: Parse upload response
+  ansible.builtin.set_fact:
+    upload_results: "{{ upload_results | default([]) + [{'file': item.item.stat.path, 'http_code': item.stdout_lines[-1], 'body': item.stdout_lines[0:-1] | join('\n')}] }}"
+  loop: "{{ dted_uploads.results }}"
+  loop_control:
+    label: "{{ item.item.stat.path | basename }}"
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
+
+- name: Display upload results
+  ansible.builtin.debug:
+    msg: "Uploaded {{ item.file | basename }} - HTTP Status: {{ item.http_code }}{% if item.http_code == '200' %} ✓{% endif %}"
+  loop: "{{ upload_results }}"
+  loop_control:
+    label: "{{ item.file | basename }}"
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
+
+- name: Clean up temporary files
+  ansible.builtin.file:
+    path: "{{ item.stat.path }}"
+    state: absent
+  loop: "{{ dted_file_stats.results }}"
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
+
+- name: Display summary
+  ansible.builtin.debug:
+    msg: "DTED upload complete. {{ upload_results | selectattr('http_code', 'equalto', '200') | list | length }}/{{ dted_files | length }} files uploaded successfully."
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
+
+- name: Fail if any uploads failed
+  ansible.builtin.fail:
+    msg: "Some DTED files failed to upload. Check the upload results above."
+  when: upload_results | selectattr('http_code', 'ne', '200') | list | length > 0
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - opentakserver-dted
+    - dted
