@@ -24,15 +24,15 @@
       include_role:
         name: gps-reset
       tags:
-        - gps_reset
+        - gps-reset
 
     - name: Include govtak role
       include_role:
         name: govtak
       tags:
         - govtak
-        - govtak_certs
-        - govtak_setup
+        - govtak-certs
+        - govtak-setup
 
     - name: Include opentakserver role
       include_role:
@@ -45,7 +45,7 @@
         name: openwrt
       tags:
         - openwrt
-        - openwrt_flash
+        - openwrt-flash
 
 - name: Deploy OpenWrt Docker Diffconfig to Build Server
   hosts: localhost
@@ -69,7 +69,7 @@
       include_role:
         name: opentakserver-dted
       tags:
-        - ots_dted
+        - ots-dted
 
 - name: Upload ATAK packages to OpenTAKServer
   hosts: openmanet_devices
@@ -81,7 +81,7 @@
       include_role:
         name: opentakserver-packages
       tags:
-        - ots_packages
+        - ots-packages
 
 - name: Create users in OpenTAKServer
   hosts: openmanet_devices
@@ -93,5 +93,5 @@
       include_role:
         name: opentakserver-users
       tags:
-        - ots_users
+        - ots-users
 

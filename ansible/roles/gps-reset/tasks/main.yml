@@ -6,14 +6,14 @@
     path: /etc/rc.d/S15gps-init
     state: absent
   tags:
-    - gps_reset
+    - gps-reset
 
 - name: Check if GPS init script exists
   ansible.builtin.stat:
     path: /etc/init.d/gps-init
   register: gps_script_exists
   tags:
-    - gps_reset
+    - gps-reset
 
 - name: Put GPS in standby mode (if script exists)
   ansible.builtin.command:
@@ -21,7 +21,7 @@
   when: gps_script_exists.stat.exists
   ignore_errors: yes
   tags:
-    - gps_reset
+    - gps-reset
 
 - name: Put GPS in standby mode via GPIO (set WAKE to HIGH)
   ansible.builtin.shell: |
@@ -37,14 +37,14 @@
     echo 1 > /sys/class/gpio/gpio{{ gps_gpio_wake }}/value 2>/dev/null || true
   ignore_errors: yes
   tags:
-    - gps_reset
+    - gps-reset
 
 - name: Remove GPS init script
   ansible.builtin.file:
     path: /etc/init.d/gps-init
     state: absent
   tags:
-    - gps_reset
+    - gps-reset
 
 - name: Display reset status
   ansible.builtin.debug:

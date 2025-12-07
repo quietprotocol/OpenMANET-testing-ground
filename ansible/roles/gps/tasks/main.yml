@@ -79,7 +79,7 @@
     group: root
   tags:
     - gps
-    - gps_alfred_gpsd
+    - gps-alfred-gpsd
 
 - name: Check if alfred-gpsd init script is already enabled
   ansible.builtin.stat:
@@ -87,7 +87,7 @@
   register: alfred_gpsd_enabled
   tags:
     - gps
-    - gps_alfred_gpsd
+    - gps-alfred-gpsd
 
 - name: Enable alfred-gpsd init script to run at boot
   ansible.builtin.command:
@@ -98,7 +98,7 @@
   failed_when: alfred_gpsd_enable_result.rc != 0
   tags:
     - gps
-    - gps_alfred_gpsd
+    - gps-alfred-gpsd
 
 - name: Start alfred-gpsd service
   ansible.builtin.command:
@@ -108,7 +108,7 @@
   failed_when: false
   tags:
     - gps
-    - gps_alfred_gpsd
+    - gps-alfred-gpsd
 
 - name: Check alfred-gpsd status
   ansible.builtin.command:
@@ -118,12 +118,12 @@
   failed_when: false
   tags:
     - gps
-    - gps_alfred_gpsd
+    - gps-alfred-gpsd
 
 - name: Display alfred-gpsd status
   ansible.builtin.debug:
     msg: "{{ alfred_gpsd_status.stdout_lines }}"
   tags:
     - gps
-    - gps_alfred_gpsd
+    - gps-alfred-gpsd
 

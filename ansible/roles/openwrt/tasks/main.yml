@@ -25,7 +25,7 @@
   register: diffconfig_file_stat
   tags:
     - openwrt
-    - openwrt_setup
+    - openwrt-setup
 
 - name: Fail if docker_diffconfig file is missing
   ansible.builtin.fail:
@@ -33,7 +33,7 @@
   when: not diffconfig_file_stat.stat.exists
   tags:
     - openwrt
-    - openwrt_setup
+    - openwrt-setup
 
 - name: Add build server to inventory dynamically
   ansible.builtin.add_host:
@@ -45,7 +45,7 @@
   when: openwrt_build_server != 'localhost'
   tags:
     - openwrt
-    - openwrt_setup
+    - openwrt-setup
     - artifacts
     - build
     - download
@@ -60,7 +60,7 @@
   when: openwrt_build_server != 'localhost'
   tags:
     - openwrt
-    - openwrt_setup
+    - openwrt-setup
     - artifacts
     - build
     - download
@@ -76,7 +76,7 @@
   become: false
   tags:
     - openwrt
-    - openwrt_setup
+    - openwrt-setup
     - clone
 
 - name: Ensure local artifacts directory exists
@@ -86,7 +86,7 @@
     mode: '0755'
   tags:
     - openwrt
-    - openwrt_setup
+    - openwrt-setup
     - artifacts
 
 # ============================================================================
@@ -100,7 +100,7 @@
   register: openwrt_repo_exists
   tags:
     - openwrt
-    - openwrt_clone
+    - openwrt-clone
 
 - name: Remove existing repository if it exists (for clean clone)
   ansible.builtin.file:
@@ -111,7 +111,7 @@
   when: openwrt_repo_exists.stat.exists and openwrt_force_clone | default(false) | bool
   tags:
     - openwrt
-    - openwrt_clone
+    - openwrt-clone
 
 - name: Clone OpenMANET OpenWrt repository
   ansible.builtin.git:
@@ -125,7 +125,7 @@
   when: not openwrt_repo_exists.stat.exists or openwrt_force_clone | default(false) | bool
   tags:
     - openwrt
-    - openwrt_clone
+    - openwrt-clone
 
 - name: Update repository to specified branch
   ansible.builtin.git:
@@ -139,7 +139,7 @@
   when: openwrt_repo_exists.stat.exists and not (openwrt_force_clone | default(false) | bool)
   tags:
     - openwrt
-    - openwrt_clone
+    - openwrt-clone
 
 # ============================================================================
 # Initialize Build Environment (morse_setup.sh)
@@ -152,7 +152,7 @@
   register: morse_setup_exists
   tags:
     - openwrt
-    - openwrt_setup
+    - openwrt-setup
     - morse
 
 - name: Run morse_setup.sh to initialize build environment
@@ -165,7 +165,7 @@
   when: morse_setup_exists.stat.exists
   tags:
     - openwrt
-    - openwrt_setup
+    - openwrt-setup
     - morse
 
 - name: Verify morse_setup.sh completed successfully
@@ -175,7 +175,7 @@
   register: config_exists
   tags:
     - openwrt
-    - openwrt_setup
+    - openwrt-setup
     - morse
 
 - name: Fail if .config was not created
@@ -184,7 +184,7 @@
   when: not config_exists.stat.exists and morse_setup_exists.stat.exists
   tags:
     - openwrt
-    - openwrt_setup
+    - openwrt-setup
     - morse
 
 # ============================================================================
@@ -200,7 +200,7 @@
   become: false
   tags:
     - openwrt
-    - openwrt_diffconfig
+    - openwrt-diffconfig
 
 - name: Copy docker_diffconfig to build server
   ansible.builtin.copy:
@@ -211,7 +211,7 @@
   become: false
   tags:
     - openwrt
-    - openwrt_diffconfig
+    - openwrt-diffconfig
 
 - name: Apply docker_diffconfig to build configuration
   ansible.builtin.shell:
@@ -223,7 +223,7 @@
   become: false
   tags:
     - openwrt
-    - openwrt_diffconfig
+    - openwrt-diffconfig
 
 - name: Verify docker_diffconfig was applied
   ansible.builtin.command:
@@ -235,14 +235,14 @@
   changed_when: false
   tags:
     - openwrt
-    - openwrt_diffconfig
+    - openwrt-diffconfig
 
 - name: Display diffconfig verification
   ansible.builtin.debug:
     msg: "{{ diffconfig_verify.stdout }}"
   tags:
     - openwrt
-    - openwrt_diffconfig
+    - openwrt-diffconfig
 
 # ============================================================================
 # Download Sources
@@ -256,7 +256,7 @@
   become: false
   tags:
     - openwrt
-    - openwrt_download
+    - openwrt-download
 
 # ============================================================================
 # Build Firmware
@@ -273,7 +273,7 @@
       - Build log is being saved to: {{ openwrt_repo_dir }}log.txt
   tags:
     - openwrt
-    - openwrt_build
+    - openwrt-build
 
 - name: Build OpenWrt firmware image
   ansible.builtin.shell:
@@ -289,7 +289,7 @@
   register: build_result
   tags:
     - openwrt
-    - openwrt_build
+    - openwrt-build
 
 - name: Check if build actually completed (workaround for async detection issues)
   ansible.builtin.stat:
@@ -298,7 +298,7 @@
   register: build_targets_check
   tags:
     - openwrt
-    - openwrt_build
+    - openwrt-build
 
 - name: Force completion if build artifacts exist but async shows incomplete
   ansible.builtin.set_fact:
@@ -312,7 +312,7 @@
     - build_result.finished is not defined or build_result.finished == 0
   tags:
     - openwrt
-    - openwrt_build
+    - openwrt-build
 
 - name: Display build completion status
   ansible.builtin.debug:
@@ -323,7 +323,7 @@
   when: build_result.finished is defined
   tags:
     - openwrt
-    - openwrt_build
+    - openwrt-build
 
 - name: Fail if build did not complete successfully
   ansible.builtin.fail:
@@ -331,7 +331,7 @@
   when: build_result.finished is defined and build_result.failed | default(false) | bool
   tags:
     - openwrt
-    - openwrt_build
+    - openwrt-build
 
 - name: Check build log for errors
   ansible.builtin.shell:
@@ -344,7 +344,7 @@
   failed_when: false
   tags:
     - openwrt
-    - openwrt_build
+    - openwrt-build
 
 - name: Display build errors if any
   ansible.builtin.debug:
@@ -352,7 +352,7 @@
   when: build_errors.stdout | length > 0
   tags:
     - openwrt
-    - openwrt_build
+    - openwrt-build
 
 - name: Find built firmware images
   ansible.builtin.find:
@@ -363,7 +363,7 @@
   register: firmware_images
   tags:
     - openwrt
-    - openwrt_build
+    - openwrt-build
     - artifacts
 
 - name: Display found firmware images
@@ -371,7 +371,7 @@
     msg: "Found {{ firmware_images.files | length }} firmware image(s): {{ firmware_images.files | map(attribute='path') | list }}"
   tags:
     - openwrt
-    - openwrt_build
+    - openwrt-build
     - artifacts
 
 # ============================================================================
@@ -387,7 +387,7 @@
   when: firmware_images.files | length > 0
   tags:
     - openwrt
-    - openwrt_artifacts
+    - openwrt-artifacts
 
 - name: Download firmware images to local machine
   ansible.builtin.fetch:
@@ -400,7 +400,7 @@
   register: downloaded_firmware_images
   tags:
     - openwrt
-    - openwrt_artifacts
+    - openwrt-artifacts
 
 - name: Note about packages directory
   ansible.builtin.debug:
@@ -410,7 +410,7 @@
   when: firmware_images.files | length > 0
   tags:
     - openwrt
-    - openwrt_artifacts
+    - openwrt-artifacts
 
 - name: Display downloaded artifacts summary
   ansible.builtin.debug:
@@ -421,7 +421,7 @@
       - Images available for flashing: {{ firmware_images.files | map(attribute='path') | map('basename') | list | join(', ') }}
   tags:
     - openwrt
-    - openwrt_artifacts
+    - openwrt-artifacts
 
 # ============================================================================
 # Flash Firmware
@@ -437,14 +437,14 @@
   changed_when: false
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Set resolved artifacts directory
   ansible.builtin.set_fact:
     openwrt_local_artifacts_dir_abs: "{{ artifacts_dir_resolved.stdout }}"
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Find downloaded firmware images in artifacts directory
   ansible.builtin.find:
@@ -456,14 +456,14 @@
   failed_when: false
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Set default flash image from artifacts if not specified
   ansible.builtin.set_fact:
     openwrt_flash_image_local: "{{ local_firmware_images.files[0].path if (openwrt_flash_image_local == '' and openwrt_flash_image_path == '' and local_firmware_images.files | length > 0) else openwrt_flash_image_local }}"
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Resolve flash image path to absolute path if set
   ansible.builtin.shell: |
@@ -474,7 +474,7 @@
   when: openwrt_flash_image_local != ''
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Set resolved flash image path
   ansible.builtin.set_fact:
@@ -482,7 +482,7 @@
   when: openwrt_flash_image_local != '' and flash_image_resolved is defined
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Display available firmware images
   ansible.builtin.debug:
@@ -493,19 +493,19 @@
   when: local_firmware_images.files | length > 0
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Validate flash image configuration
   ansible.builtin.assert:
     that:
-      - openwrt_flash_image_path != "" or openwrt_flash_image_local != ""
+      - openwrt-flash_image_path != "" or openwrt_flash_image_local != ""
     fail_msg: |
       Either openwrt_flash_image_path (remote/local on device) or openwrt_flash_image_local (local file to transfer) must be set.
       Available images in artifacts: {{ local_firmware_images.files | map(attribute='path') | list | join(', ') if local_firmware_images.files | length > 0 else 'None found' }}
     success_msg: "Flash image configuration is valid"
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Determine flash image source
   ansible.builtin.set_fact:
@@ -513,7 +513,7 @@
     flash_image_source: "{{ openwrt_flash_image_local if openwrt_flash_image_local != '' else openwrt_flash_image_path }}"
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Check if local image file exists
   ansible.builtin.stat:
@@ -523,7 +523,7 @@
   when: flash_image_is_local | bool
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Fail if local image file does not exist
   ansible.builtin.fail:
@@ -533,7 +533,7 @@
     - not local_image_stat.stat.exists
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Transfer firmware image to device
   ansible.builtin.copy:
@@ -543,7 +543,7 @@
   when: flash_image_is_local | bool
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Check if remote image exists on device
   ansible.builtin.stat:
@@ -552,7 +552,7 @@
   when: not (flash_image_is_local | bool)
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Fail if remote image does not exist on device
   ansible.builtin.fail:
@@ -562,14 +562,14 @@
     - not remote_image_stat.stat.exists
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Set final image path on device
   ansible.builtin.set_fact:
     flash_image_device_path: "{{ openwrt_flash_device_path if flash_image_is_local | bool else openwrt_flash_image_path }}"
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Display flash configuration
   ansible.builtin.debug:
@@ -580,7 +580,7 @@
       - Device will reboot after flashing
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Flash firmware using sysupgrade
   ansible.builtin.shell:
@@ -592,14 +592,14 @@
   register: flash_result
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Verify sysupgrade command was executed
   ansible.builtin.debug:
     msg: "sysupgrade command executed. Device should reboot now. Actual flashing happens during reboot."
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Wait for device to reboot (sysupgrade causes immediate reboot)
   ansible.builtin.pause:
@@ -607,7 +607,7 @@
     prompt: "Device is rebooting. Waiting 10 seconds before checking connectivity..."
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Wait for device to come back online
   ansible.builtin.wait_for_connection:
@@ -616,7 +616,7 @@
     timeout: 300
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Verify firmware version after reboot
   ansible.builtin.shell:
@@ -625,7 +625,7 @@
   changed_when: false
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash
 
 - name: Display flash completion message
   ansible.builtin.debug:
@@ -636,4 +636,4 @@
       - Firmware version: {{ firmware_version.stdout | default('Unknown') }}
   tags:
     - openwrt
-    - openwrt_flash
+    - openwrt-flash

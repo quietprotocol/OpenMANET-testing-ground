@@ -9,7 +9,7 @@
     creates: /usr/bin/git
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Ensure GovTAK Server directory exists
   ansible.builtin.file:
@@ -166,7 +166,7 @@
   when: tak_server_run_setup | bool
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Check if TAK Server containers are running
   ansible.builtin.shell: |
@@ -179,7 +179,7 @@
   failed_when: false
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Display TAK Server already configured message
   ansible.builtin.debug:
@@ -200,7 +200,7 @@
     - tak_server_force_setup | default(false) | bool == false
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Clean up existing TAK Server installation (force setup)
   ansible.builtin.shell: |
@@ -214,7 +214,7 @@
     - tak_server_force_setup | default(false) | bool
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Ensure local certs directory exists
   ansible.builtin.file:
@@ -227,7 +227,7 @@
     - (not tak_server_configured.stat.exists) or (tak_server_force_setup | default(false) | bool)
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Start TAK Server setup script in background
   ansible.builtin.shell: |
@@ -242,7 +242,7 @@
   changed_when: false
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Monitor and display setup progress
   ansible.builtin.shell: |
@@ -282,7 +282,7 @@
   delay: 10
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Wait for setup to complete
   ansible.builtin.wait_for:
@@ -293,7 +293,7 @@
     - (not tak_server_configured.stat.exists) or (tak_server_force_setup | default(false) | bool)
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Read setup output file
   ansible.builtin.slurp:
@@ -304,7 +304,7 @@
     - (not tak_server_configured.stat.exists) or (tak_server_force_setup | default(false) | bool)
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Extract passwords from setup output
   ansible.builtin.set_fact:
@@ -317,7 +317,7 @@
     - setup_output_file.content is defined
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Display admin credentials
   ansible.builtin.debug:
@@ -335,7 +335,7 @@
     - tak_admin_password is defined
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Wait for TAK Server to be fully ready
   ansible.builtin.pause:
@@ -346,7 +346,7 @@
     - (not tak_server_configured.stat.exists) or (tak_server_force_setup | default(false) | bool)
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Get TAK container name
   ansible.builtin.shell: |
@@ -358,7 +358,7 @@
   changed_when: false
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Set TAK container name
   ansible.builtin.set_fact:
@@ -368,7 +368,7 @@
     - (not tak_server_configured.stat.exists) or (tak_server_force_setup | default(false) | bool)
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Create user certificates for martin and leon
   ansible.builtin.shell: |
@@ -380,7 +380,7 @@
   register: makecert_result
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Display certificate creation results
   ansible.builtin.debug:
@@ -392,7 +392,7 @@
     - makecert_result.results is defined
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Create data packages for user certificates
   ansible.builtin.shell: |
@@ -404,14 +404,14 @@
     - (not tak_server_configured.stat.exists) or (tak_server_force_setup | default(false) | bool)
   tags:
     - govtak
-    - govtak_setup
+    - govtak-setup
 
 - name: Check if TAK Server is configured (for certs tag)
   ansible.builtin.stat:
     path: "{{ tak_server_dir }}/tak/CoreConfig.xml"
   register: tak_server_configured_for_certs
   tags:
-    - govtak_certs
+    - govtak-certs
 
 - name: Find all certificate files on device
   ansible.builtin.find:
@@ -426,8 +426,8 @@
   register: cert_files
   tags:
     - govtak
-    - govtak_setup
-    - govtak_certs
+    - govtak-setup
+    - govtak-certs
 
 - name: Ensure local certs directory exists (for certs tag)
   ansible.builtin.file:
@@ -437,7 +437,7 @@
   delegate_to: localhost
   when: tak_server_configured_for_certs.stat.exists | default(false)
   tags:
-    - govtak_certs
+    - govtak-certs
 
 - name: Download all certificates to local machine
   ansible.builtin.fetch:
@@ -450,8 +450,8 @@
     - cert_files.files | length > 0
   tags:
     - govtak
-    - govtak_setup
-    - govtak_certs
+    - govtak-setup
+    - govtak-certs
 
 - name: Display certificate download summary
   ansible.builtin.debug:
@@ -464,6 +464,6 @@
     - cert_files.files | length > 0
   tags:
     - govtak
-    - govtak_setup
-    - govtak_certs
+    - govtak-setup
+    - govtak-certs
 

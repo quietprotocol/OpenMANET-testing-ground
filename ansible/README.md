@@ -30,7 +30,7 @@ The Ansible setup provides:
    ansible-playbook playbooks/site.yml --tags docker
    ansible-playbook playbooks/site.yml --tags gps
    ansible-playbook playbooks/site.yml --tags govtak
-   ansible-playbook playbooks/site.yml --tags opentakserver
+   ansible-playbook playbooks/site.yml --tags ots
    ```
 
 ## Directory Structure
@@ -59,6 +59,7 @@ ansible/
     ├── opentakserver/       # OpenTAKServer role
     ├── opentakserver-dted/  # OpenTAKServer DTED upload role
     ├── opentakserver-packages/  # OpenTAKServer packages upload role
+    ├── opentakserver-users/  # OpenTAKServer user creation role
     └── openwrt/             # OpenWrt build role
 ```
 
@@ -247,7 +248,7 @@ Override these in `group_vars/all.yml` or `host_vars/<hostname>.yml` if needed.
 
 ```bash
 # Upload DTED files to OpenTAKServer on gateway
-ansible-playbook playbooks/site.yml --tags opentakserver-dted --limit gateway
+ansible-playbook playbooks/site.yml --tags ots-dted --limit gateway
 ```
 
 **Note:** The role targets the gateway device (where OpenTAKServer runs) but all tasks are delegated to `localhost` (the control machine) since they need to download files from GitHub and make API calls. The `opentakserver_host` variable automatically uses the target device's `ansible_host` to connect to the correct OpenTAKServer instance.
@@ -287,7 +288,7 @@ Override these in `group_vars/all.yml` or `host_vars/<hostname>.yml` if needed.
 
 ```bash
 # Upload ATAK packages to OpenTAKServer on gateway
-ansible-playbook playbooks/site.yml --tags opentakserver-packages --limit gateway
+ansible-playbook playbooks/site.yml --tags ots-packages --limit gateway
 ```
 
 **Note:** The role targets the gateway device (where OpenTAKServer runs) but all tasks are delegated to `localhost` (the control machine) since they need to download files from GitHub and make API calls. The `opentakserver_host` variable automatically uses the target device's `ansible_host` to connect to the correct OpenTAKServer instance.
@@ -314,6 +315,44 @@ The following ATAK plugins are available for download from APKPure. These can be
 - **PDF** https://apkpure.com/atak-plugin-pdf/com.atakmap.android.gbr.pdf.plugin
 - **Meshtastic**: https://github.com/meshtastic/ATAK-Plugin/releases/download/1.1.23/ATAK-Plugin-Meshtastic.Plugin-1.1.23-bdcc9b10-5.6.0-civ-release.apk
 
+### opentakserver-users
+
+Creates users in OpenTAKServer using the API. Uses token authentication as documented in the [OpenTAKServer authentication guide](https://docs.opentakserver.io/authentication.html). Requires administrator role.
+
+**Tasks:**
+- Waits for OpenTAKServer API to be ready
+- Authenticates with OpenTAKServer using token authentication
+- Creates users via `/api/user/add` API endpoint
+- Handles existing users gracefully (treats as success)
+
+**Variables** (defined in `roles/opentakserver-users/defaults/main.yml`):
+- `opentakserver_host`: OpenTAKServer hostname or IP (default: `{{ ansible_host | default(inventory_hostname) }}`)
+- `opentakserver_port`: OpenTAKServer port (default: `8880`)
+- `opentakserver_username`: Username for authentication (default: `administrator`)
+- `opentakserver_password`: Password for authentication (default: `password`)
+- `opentakserver_users`: List of users to create (default: includes `martin` and `leon` with password `atakatak`)
+
+Each user entry can include:
+- `username`: Username
+- `password`: Password
+- `email`: Email address (optional)
+- `roles`: User roles (default: `["user"]`)
+
+Override these in `group_vars/all.yml` or `host_vars/<hostname>.yml` if needed.
+
+**Usage:**
+
+```bash
+# Create users in OpenTAKServer on gateway
+ansible-playbook playbooks/site.yml --tags ots-users --limit gateway
+```
+
+**Note:** The role targets the gateway device (where OpenTAKServer runs) but all tasks are delegated to `localhost` (the control machine) since they need to make API calls. The `opentakserver_host` variable automatically uses the target device's `ansible_host` to connect to the correct OpenTAKServer instance.
+
+**Note:** This role requires administrator privileges. If a user already exists, the role will treat it as a successful outcome and continue.
+
+**Reference:** [OpenTAKServer User API](https://github.com/brian7704/OpenTAKServer/blob/master/opentakserver/blueprints/ots_api/user_api.py)
+
 ### openwrt
 
 Complete OpenWrt firmware build workflow. This role handles the entire build process from cloning the repository to pulling build artifacts back to your local machine.
@@ -337,12 +376,12 @@ Complete OpenWrt firmware build workflow. This role handles the entire build pro
 ansible-playbook playbooks/openwrt.yml
 
 # Run specific steps using tags
-ansible-playbook playbooks/openwrt.yml --tags clone      # Just clone repo
-ansible-playbook playbooks/openwrt.yml --tags setup       # Setup and morse
-ansible-playbook playbooks/openwrt.yml --tags diffconfig  # Apply docker config
-ansible-playbook playbooks/openwrt.yml --tags download    # Download sources
-ansible-playbook playbooks/openwrt.yml --tags build       # Build firmware
-ansible-playbook playbooks/openwrt.yml --tags artifacts   # Pull artifacts
+ansible-playbook playbooks/openwrt.yml --tags openwrt-clone      # Just clone repo
+ansible-playbook playbooks/openwrt.yml --tags openwrt-setup       # Setup and morse
+ansible-playbook playbooks/openwrt.yml --tags openwrt-diffconfig  # Apply docker config
+ansible-playbook playbooks/openwrt.yml --tags openwrt-download    # Download sources
+ansible-playbook playbooks/openwrt.yml --tags openwrt-build       # Build firmware
+ansible-playbook playbooks/openwrt.yml --tags openwrt-artifacts   # Pull artifacts
 ```
 
 **Variables** (defined in `roles/openwrt/defaults/main.yml`):
@@ -411,18 +450,18 @@ The openwrt role also supports flashing firmware images to devices. You can flas
 
 ```bash
 # Flash using auto-detected image from artifacts (recommended)
-ansible-playbook playbooks/site.yml --tags flash --limit gateway
+ansible-playbook playbooks/site.yml --tags openwrt-flash --limit gateway
 
 # Flash image that's already on the device
-ansible-playbook playbooks/site.yml --tags flash --limit gateway \
+ansible-playbook playbooks/site.yml --tags openwrt-flash --limit gateway \
   -e "openwrt_flash_image_path=/tmp/firmware.img.gz"
 
 # Flash specific image from local machine
-ansible-playbook playbooks/site.yml --tags flash --limit gateway \
+ansible-playbook playbooks/site.yml --tags openwrt-flash --limit gateway \
   -e "openwrt_flash_image_local=../artifacts/openwrt/firmware.img.gz"
 
 # Flash without preserving settings
-ansible-playbook playbooks/site.yml --tags flash --limit gateway \
+ansible-playbook playbooks/site.yml --tags openwrt-flash --limit gateway \
   -e "openwrt_flash_image_local=../artifacts/openwrt/firmware.img.gz" \
   -e "openwrt_flash_keep_settings=false"
 ```

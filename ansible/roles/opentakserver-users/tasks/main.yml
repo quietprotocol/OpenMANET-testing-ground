@@ -20,7 +20,7 @@
   delegate_to: localhost
   run_once: true
   tags:
-    - ots_users
+    - ots-users
 
 - name: Get authentication token from OpenTAKServer
   ansible.builtin.uri:
@@ -36,7 +36,7 @@
   delegate_to: localhost
   run_once: true
   tags:
-    - ots_users
+    - ots-users
 
 - name: Extract authentication token from response
   ansible.builtin.set_fact:
@@ -45,7 +45,7 @@
   delegate_to: localhost
   run_once: true
   tags:
-    - ots_users
+    - ots-users
 
 - name: Fail if authentication token not obtained
   ansible.builtin.fail:
@@ -54,7 +54,7 @@
   delegate_to: localhost
   run_once: true
   tags:
-    - ots_users
+    - ots-users
 
 - name: Create users in OpenTAKServer
   ansible.builtin.uri:
@@ -76,7 +76,7 @@
   delegate_to: localhost
   run_once: true
   tags:
-    - ots_users
+    - ots-users
 
 - name: Parse user creation response
   ansible.builtin.set_fact:
@@ -85,7 +85,7 @@
   delegate_to: localhost
   run_once: true
   tags:
-    - ots_users
+    - ots-users
 
 - name: Display user creation results
   ansible.builtin.debug:
@@ -101,7 +101,7 @@
   delegate_to: localhost
   run_once: true
   tags:
-    - ots_users
+    - ots-users
 
 - name: Fail if any user creation failed
   ansible.builtin.fail:
@@ -110,5 +110,5 @@
   delegate_to: localhost
   run_once: true
   tags:
-    - ots_users
+    - ots-users
 
