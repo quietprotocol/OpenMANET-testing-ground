@@ -162,13 +162,23 @@
     - opentakserver-packages
     - packages
 
-- name: Add extracted .apk files from .xapk archives to final list
+- name: Filter out configuration APKs and select main plugin APK from .xapk archives
   ansible.builtin.set_fact:
-    packages_final_files: "{{ packages_final_files | default([]) + [{'original_file': item[0].item[0].stat.path, 'apk_file': item[1].files[0].path, 'package_info': item[0].item[1]}] }}"
+    packages_final_files: "{{ packages_final_files | default([]) + [{'original_file': item[0].item[0].stat.path, 'apk_file': main_plugin_apk, 'package_info': item[0].item[1]}] }}"
   loop: "{{ xapk_extractions.results | default([]) | zip(extracted_apks.results | default([])) | list }}"
+  vars:
+    # Filter out config APKs (config.xxxhdpi.apk, config.mdpi.apk, config.ar.apk, etc.)
+    # Config APKs have "config." in their filename
+    all_apks: "{{ item[1].files | default([]) }}"
+    non_config_apks: "{{ all_apks | selectattr('path', 'match', '.*\\.apk$') | rejectattr('path', 'match', '.*config\\..*\\.apk$') | list }}"
+    # Prefer APKs matching the plugin pattern (com.atakmap.android.*.plugin.apk)
+    plugin_apks: "{{ non_config_apks | selectattr('path', 'match', '.*com\\.atakmap\\.android\\..*\\.plugin\\.apk$') | list }}"
+    # Select the main plugin APK: prefer plugin pattern, otherwise use largest non-config APK
+    main_plugin_apk: "{{ (plugin_apks | length > 0) | ternary(plugin_apks[0].path, (non_config_apks | sort(attribute='size', reverse=true) | list)[0].path) }}"
   when: 
     - item[1].files is defined
     - item[1].files | length > 0
+    - non_config_apks | length > 0
   delegate_to: localhost
   run_once: true
   tags:
@@ -200,7 +210,7 @@
 
 - name: Parse upload response
   ansible.builtin.set_fact:
-    upload_results: "{{ upload_results | default([]) + [{'file': item.item.apk_file, 'http_code': item.stdout_lines[-1], 'body': item.stdout_lines[0:-1] | join('\n')}] }}"
+    upload_results: "{{ upload_results | default([]) + [{'file': item.item.apk_file, 'http_code': item.stdout_lines[-1], 'body': item.stdout_lines[0:-1] | join('\n'), 'is_success': (item.stdout_lines[-1] == '200' or item.stdout_lines[-1] == '201' or (item.stdout_lines[-1] == '400' and 'already on the server' in (item.stdout_lines[0:-1] | join('\n'))) )}] }}"
   loop: "{{ packages_uploads.results }}"
   loop_control:
     label: "{{ item.item.apk_file | basename }}"
@@ -214,8 +224,10 @@
   ansible.builtin.debug:
     msg: |
       File: {{ item.file | basename }}
-      HTTP Status: {{ item.http_code }}{% if item.http_code == '200' or item.http_code == '201' %} ✓{% else %} ✗{% endif %}
-      {% if item.http_code != '200' and item.http_code != '201' %}
+      HTTP Status: {{ item.http_code }}{% if item.is_success %} ✓{% else %} ✗{% endif %}
+      {% if item.http_code == '400' and 'already on the server' in item.body %}
+      (Package already exists on server)
+      {% elif not item.is_success %}
       Error Response: {{ item.body | default('No error message') | truncate(500) }}
       {% endif %}
   loop: "{{ upload_results }}"
@@ -251,7 +263,7 @@
 
 - name: Display summary
   ansible.builtin.debug:
-    msg: "Package upload complete. {{ upload_results | selectattr('http_code', 'match', '^(200|201)$') | list | length }}/{{ packages_final_files | length }} files uploaded successfully."
+    msg: "Package upload complete. {{ upload_results | selectattr('is_success', 'equalto', true) | list | length }}/{{ packages_final_files | length }} files uploaded successfully (or already exist)."
   delegate_to: localhost
   run_once: true
   tags:
@@ -261,7 +273,7 @@
 - name: Fail if any uploads failed
   ansible.builtin.fail:
     msg: "Some package files failed to upload. Check the upload results above."
-  when: upload_results | selectattr('http_code', 'match', '^(200|201)$') | list | length != packages_final_files | length
+  when: upload_results | selectattr('is_success', 'equalto', true) | list | length != packages_final_files | length
   delegate_to: localhost
   run_once: true
   tags:
