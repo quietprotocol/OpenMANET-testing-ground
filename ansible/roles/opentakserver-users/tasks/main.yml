@@ -1,0 +1,114 @@
+---
+# OpenTAKServer Users Role
+# Creates users in OpenTAKServer using the API
+# Uses token authentication: https://docs.opentakserver.io/authentication.html
+
+- name: Wait for OpenTAKServer API to be ready
+  ansible.builtin.uri:
+    url: "http://{{ opentakserver_host }}:{{ opentakserver_port }}/api/login?include_auth_token="
+    method: POST
+    body_format: json
+    body:
+      username: "{{ opentakserver_username }}"
+      password: "{{ opentakserver_password }}"
+    status_code: [200]
+    return_content: yes
+  register: api_ready_check
+  until: api_ready_check.status == 200
+  retries: 30
+  delay: 5
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - ots_users
+
+- name: Get authentication token from OpenTAKServer
+  ansible.builtin.uri:
+    url: "http://{{ opentakserver_host }}:{{ opentakserver_port }}/api/login?include_auth_token="
+    method: POST
+    body_format: json
+    body:
+      username: "{{ opentakserver_username }}"
+      password: "{{ opentakserver_password }}"
+    status_code: [200]
+    return_content: yes
+  register: auth_response
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - ots_users
+
+- name: Extract authentication token from response
+  ansible.builtin.set_fact:
+    auth_token: "{{ auth_response.json.response.user.authentication_token }}"
+  when: auth_response.status == 200 and auth_response.json.response.user.authentication_token is defined
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - ots_users
+
+- name: Fail if authentication token not obtained
+  ansible.builtin.fail:
+    msg: "Failed to obtain authentication token. HTTP Status: {{ auth_response.status | default('N/A') }}. Response: {{ auth_response.content | default('N/A') }}"
+  when: auth_token is not defined or auth_token == ''
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - ots_users
+
+- name: Create users in OpenTAKServer
+  ansible.builtin.uri:
+    url: "http://{{ opentakserver_host }}:{{ opentakserver_port }}/api/user/add"
+    method: POST
+    body_format: json
+    headers:
+      Authentication-Token: "{{ auth_token }}"
+      Content-Type: "application/json"
+    body:
+      username: "{{ item.username }}"
+      password: "{{ item.password }}"
+      confirm_password: "{{ item.password }}"
+      roles: "{{ item.roles | default(['user']) }}"
+    status_code: [200, 400, 409]
+    return_content: yes
+  loop: "{{ opentakserver_users }}"
+  register: user_creation_results
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - ots_users
+
+- name: Parse user creation response
+  ansible.builtin.set_fact:
+    user_results: "{{ user_results | default([]) + [{'username': item.item.username, 'status': item.status, 'success': (item.status == 200 and item.json.success is defined and item.json.success) or ((item.status == 400 or item.status == 409) and 'already exists' in (item.json.error | default(''))) , 'error': item.json.error | default('')}] }}"
+  loop: "{{ user_creation_results.results }}"
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - ots_users
+
+- name: Display user creation results
+  ansible.builtin.debug:
+    msg: |
+      User: {{ item.username }}
+      HTTP Status: {{ item.status }}{% if item.success %} ✓{% if item.status == 200 %} Created{% elif item.status == 409 or item.status == 400 %} Already exists{% endif %}{% else %} ✗ Failed{% endif %}
+      {% if not item.success %}
+      Error: {{ item.error | default('Unknown error') }}
+      {% endif %}
+  loop: "{{ user_results }}"
+  loop_control:
+    label: "{{ item.username }}"
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - ots_users
+
+- name: Fail if any user creation failed
+  ansible.builtin.fail:
+    msg: "User creation failed for one or more users. Check the results above."
+  when: user_results | selectattr('success', 'equalto', false) | list | length > 0
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - ots_users
+

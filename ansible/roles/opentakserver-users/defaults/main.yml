@@ -1,0 +1,24 @@
+---
+# Default variables for opentakserver-users role
+
+# OpenTAKServer connection
+# Defaults to the current host's ansible_host or inventory_hostname
+# Override in group_vars or host_vars to point to specific OpenTAKServer instance
+opentakserver_host: "{{ ansible_host | default(inventory_hostname) }}"
+opentakserver_port: 8880
+opentakserver_username: administrator
+opentakserver_password: password
+
+# Users to create
+# Note: roles defaults to ["user"] for regular users
+# To make a user an administrator, set roles: ["administrator"]
+opentakserver_users:
+  - username: martin
+    password: atakatak
+    email: martin@example.com
+    roles: ["user"]
+  - username: leon
+    password: atakatak
+    email: leon@example.com
+    roles: ["user"]
+

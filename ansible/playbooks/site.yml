@@ -83,4 +83,15 @@
       tags:
         - ots_packages
 
+- name: Create users in OpenTAKServer
+  hosts: openmanet_devices
+  gather_facts: no
+  become: no
+  
+  tasks:
+    - name: Include opentakserver-users role
+      include_role:
+        name: opentakserver-users
+      tags:
+        - ots_users
 
