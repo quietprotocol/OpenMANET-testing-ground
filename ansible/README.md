@@ -48,12 +48,14 @@ ansible/
 │   ├── govtak.yml           # GovTAK Server deployment
 │   ├── docker.yml           # Docker configuration
 │   ├── gps.yml              # GPS setup
+│   ├── gps-reset.yml        # GPS reset
 │   ├── opentakserver.yml    # OpenTAKServer deployment
 │   └── openwrt.yml          # OpenWrt firmware build
 └── roles/                   # Ansible roles
     ├── govtak/              # GovTAK Server role
     ├── docker/               # Docker role
     ├── gps/                 # GPS role
+    ├── gps-reset/           # GPS reset role
     ├── opentakserver/       # OpenTAKServer role
     └── openwrt/             # OpenWrt build role
 ```
@@ -110,13 +112,53 @@ Configures GPS initialization for WM1302 Pi Hat with Quectel L76K GNSS module.
 - Sets up GPIO pins for GPS reset and wake control
 
 **Variables** (defined in `roles/gps/defaults/main.yml`):
-- `gps_serial_port`: GPS serial port (default: `/dev/ttyAMA0`)
-- `gps_reset_gpio`: GPIO pin for GPS reset (default: `25`)
-- `gps_wake_gpio`: GPIO pin for GPS wake (default: `24`)
+- `gps_tty_device`: GPS serial port (default: `/dev/ttyAMA0`)
+- `gps_gpio_rst`: GPIO pin for GPS reset (default: `25`)
+- `gps_gpio_wake`: GPIO pin for GPS wake (default: `12`)
+- `gps_baud`: GPS baud rate (default: `9600`)
 
 Override these in `group_vars/all.yml` or `host_vars/<hostname>.yml` if needed.
 
 **Note:** GPS setup requires WM1302 Pi Hat hardware. The GPS will start automatically on boot.
+
+**Testing GPS:**
+
+You can test GPS connectivity using `gpspipe` or `gpsmon` to connect to the gpsd daemon:
+
+```bash
+# View raw NMEA data
+gpspipe
+
+# View formatted GPS data
+gpsmon 127.0.0.1:2947
+```
+
+The gpsd daemon listens on `127.0.0.1:2947` by default.
+
+### gps-reset
+
+Removes GPS initialization configuration and puts the GPS module into standby mode. This role is useful for disabling GPS functionality or resetting GPS configuration to factory settings.
+
+**Tasks:**
+- Disables GPS init script at boot (removes `/etc/rc.d/S15gps-init`)
+- Puts GPS in standby mode using the init script (if it exists)
+- Puts GPS in standby mode via GPIO (sets WAKE pin to HIGH)
+- Removes the GPS init script (`/etc/init.d/gps-init`)
+
+**Variables** (defined in `roles/gps-reset/defaults/main.yml`):
+- `gps_gpio_rst`: GPIO pin for GPS reset (default: `25`)
+- `gps_gpio_wake`: GPIO pin for GPS wake (default: `12`)
+
+Override these in `group_vars/all.yml` or `host_vars/<hostname>.yml` if needed.
+
+**Usage:**
+
+```bash
+# Reset GPS configuration on specific device
+ansible-playbook playbooks/site.yml --tags gps-reset --limit gateway
+```
+
+**Note:** This role will completely remove GPS initialization and put the GPS module in standby mode. To re-enable GPS, run the `gps` role again.
 
 ### govtak
 
