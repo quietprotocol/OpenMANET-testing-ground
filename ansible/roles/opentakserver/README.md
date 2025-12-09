@@ -1,6 +1,6 @@
 # opentakserver
 
-Deploys OpenTAKServer Docker Compose configuration.
+Deploys OpenTAKServer Docker Compose configuration. Based on https://github.com/milsimdk/ots-docker
 
 ## Tasks
 

@@ -91,6 +91,22 @@
   tags:
     - ots
 
+- name: Copy fixed nginx https-443.conf.template
+  ansible.builtin.copy:
+    src: https-443.conf.template
+    dest: "{{ opentakserver_dir }}/persistent/nginx/templates/https-443.conf.template"
+    mode: '0644'
+  tags:
+    - ots
+
+- name: Copy fixed nginx https-8443.conf.template
+  ansible.builtin.copy:
+    src: https-8443.conf.template
+    dest: "{{ opentakserver_dir }}/persistent/nginx/templates/https-8443.conf.template"
+    mode: '0644'
+  tags:
+    - ots
+
 - name: Verify deployment
   ansible.builtin.shell:
     cmd: |
